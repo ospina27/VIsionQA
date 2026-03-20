@@ -11,8 +11,11 @@ Core Features
 Real-Time Detection (< 0.5s): Live video analysis on conveyor belts without creating production bottlenecks.
 
 Ergonomic UI (Dark Mode): User interface specifically designed to reduce operator visual fatigue and facilitate interaction while wearing safety gloves (high-contrast buttons).
+
 False Positives Management: User empowerment through quick reporting buttons to correct the AI, allowing data collection for future retraining (scaling accuracy from 85% to >95%).
+
 Automatic Evidence Generation: Creation of PDF reports with exact captures (bounding boxes) of defective containers to support supplier audits.
+
 Alert System and Batch Traffic Light: Clear visual indicators (Green, Yellow, Red) for instant decision-making and line stoppages.
 
 # Tech Stack

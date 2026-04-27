@@ -1,57 +1,111 @@
-import { Wifi, WifiOff, Cloud, CloudOff } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Wifi, WifiOff, Cloud } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { useConfiguracion } from "../contexts/ConfiguracionContext";
 
-export function NetworkStatus() {
-  const [isOnline, setIsOnline] = useState(true);
+// Lectura segura de navigator.onLine
+function getOnlineStatus(): boolean {
+  try {
+    return typeof navigator !== "undefined" ? navigator.onLine : true;
+  } catch (e) {
+    return true;
+  }
+}
+
+export function useNetworkStatus() {
+  const [isOnline, setIsOnline] = useState<boolean>(getOnlineStatus);
+  const [isSlowConnection, setIsSlowConnection] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const { config } = useConfiguracion();
+  const offlineTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    // Simulate random offline states
-    const interval = setInterval(() => {
-      if (Math.random() > 0.95) {
-        setIsOnline(false);
-        setTimeout(() => setIsOnline(true), 5000);
+    const handleOnline = () => {
+      if (offlineTimerRef.current) {
+        clearTimeout(offlineTimerRef.current);
+        offlineTimerRef.current = null;
       }
-    }, 30000);
+      setIsOnline(true);
+    };
 
-    return () => clearInterval(interval);
-  }, []);
+    const handleOffline = () => {
+      // Disparar modo offline después del tiempo configurado
+      offlineTimerRef.current = setTimeout(() => {
+        setIsOnline(false);
+      }, config.umbralFalloRed * 1000);
+    };
 
+    try {
+      window.addEventListener("online",  handleOnline);
+      window.addEventListener("offline", handleOffline);
+    } catch (e) { /* entorno sin window */ }
+
+    // Network Information API
+    try {
+      const conn = (navigator as any).connection
+        || (navigator as any).mozConnection
+        || (navigator as any).webkitConnection;
+
+      if (conn) {
+        const handleChange = () => {
+          setIsSlowConnection(
+            conn.effectiveType === "2g" ||
+            conn.effectiveType === "slow-2g" ||
+            conn.downlink < 0.5
+          );
+        };
+        handleChange();
+        conn.addEventListener("change", handleChange);
+      }
+    } catch (e) { /* API no disponible */ }
+
+    return () => {
+      try {
+        window.removeEventListener("online",  handleOnline);
+        window.removeEventListener("offline", handleOffline);
+        const conn = (navigator as any).connection;
+        if (conn) conn.removeEventListener("change", () => {});
+      } catch (e) { /* noop */ }
+      if (offlineTimerRef.current) clearTimeout(offlineTimerRef.current);
+    };
+  }, [config.umbralFalloRed]);
+
+  // Indicador de sincronización al volver la conexión
   useEffect(() => {
     if (isOnline) {
       setIsSyncing(true);
-      setTimeout(() => setIsSyncing(false), 2000);
+      const t = setTimeout(() => setIsSyncing(false), 3000);
+      return () => clearTimeout(t);
     }
   }, [isOnline]);
 
+  return { isOnline, isSlowConnection, isSyncing };
+}
+
+// Componente visual compacto para headers
+export function NetworkStatus() {
+  const { isOnline, isSlowConnection, isSyncing } = useNetworkStatus();
+
   return (
-    <div className="flex items-center gap-2 md:gap-3">
-      {/* Network Status */}
-      <div className={`flex items-center gap-1 md:gap-2 px-2 md:px-4 py-1 md:py-2 rounded text-xs md:text-sm ${
-        isOnline ? "bg-green-900/30 text-green-500" : "bg-red-900/30 text-red-500"
+    <div className="flex items-center gap-2">
+      <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs ${
+        !isOnline
+          ? "bg-orange-900/30 text-orange-400"
+          : isSlowConnection
+          ? "bg-yellow-900/30 text-yellow-400"
+          : "bg-green-900/30 text-green-500"
       }`}>
-        {isOnline ? (
-          <Wifi size={16} className={`md:w-5 md:h-5 ${isSyncing ? "animate-pulse" : ""}`} />
-        ) : (
-          <WifiOff size={16} className="md:w-5 md:h-5" />
-        )}
+        {isOnline
+          ? <Wifi size={14} className={isSyncing ? "animate-pulse" : ""} />
+          : <WifiOff size={14} />}
         <span className="font-bold whitespace-nowrap hidden sm:inline">
-          {isOnline ? "EN LÍNEA" : "SIN CONEXIÓN"}
+          {!isOnline ? "SIN RED" : isSlowConnection ? "RED LENTA" : "EN LÍNEA"}
         </span>
       </div>
 
-      {/* Sync Status */}
-      {isSyncing && (
-        <div className="hidden md:flex items-center gap-2 px-4 py-2 rounded bg-blue-900/30 text-blue-400">
-          <Cloud size={20} className="animate-pulse" />
-          <span className="text-sm font-bold whitespace-nowrap">SINCRONIZANDO...</span>
-        </div>
-      )}
-
-      {!isOnline && (
-        <div className="hidden md:flex items-center gap-2 px-4 py-2 rounded bg-gray-700 text-gray-300">
-          <CloudOff size={20} />
-          <span className="text-sm font-bold whitespace-nowrap">MODO LOCAL</span>
+      {isSyncing && isOnline && (
+        <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded bg-blue-900/30 text-blue-400">
+          <Cloud size={14} className="animate-pulse" />
+          <span className="text-xs font-bold whitespace-nowrap">SINCRONIZANDO...</span>
         </div>
       )}
     </div>

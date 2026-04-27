@@ -1,19 +1,11 @@
-import { useState } from "react";
-import { useNavigate } from "react-router";
+import { useState, useEffect } from "react";
 import { SidebarVisionQA } from "../components/SidebarVisionQA";
+import { useRegistros } from "../context/RegistrosContext";
+import { useConfiguracion } from "../contexts/ConfiguracionContext";
 import { 
-  AlertTriangle, 
-  Camera, 
-  Wifi, 
-  Thermometer, 
-  Power, 
   CheckCircle, 
-  Clock, 
-  AlertOctagon,
   X,
-  ArrowRight,
-  FileText,
-  Shield
+  FileText
 } from "lucide-react";
 
 type AlertPriority = "CRÍTICA" | "ALTA" | "MEDIA" | "BAJA";
@@ -32,155 +24,55 @@ interface Alert {
 }
 
 export function Alertas() {
-  const navigate = useNavigate();
+  const { registros } = useRegistros();
+  const { config } = useConfiguracion();
+  
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
   const [showSOP, setShowSOP] = useState(false);
-  
-  // Mock data - En producción vendría de un sistema de monitoreo real
-  const [activeAlerts, setActiveAlerts] = useState<Alert[]>([
-    {
-      id: "AL-2024-001",
-      type: "LENTE_SUCIO",
-      title: "Visión Comprometida Detectada",
-      description: "La cámara CAM_04 muestra degradación de imagen por suciedad acumulada",
-      priority: "MEDIA",
-      status: "ACTIVA",
-      timestamp: new Date(Date.now() - 300000), // 5 min ago
-      sop: [
-        "1. Presionar botón PAUSAR en el dashboard principal",
-        "2. Tomar el paño de microfibra del kit de limpieza (cajón derecho)",
-        "3. Aplicar 2 gotas de solución limpiadora específica para lentes",
-        "4. Limpiar lente en movimientos circulares suaves de adentro hacia afuera",
-        "5. Verificar en pantalla que la imagen esté nítida",
-        "6. Marcar como RESUELTA y reanudar inspección",
-        "7. Si persiste: ESCALAR a mantenimiento técnico"
-      ],
-      actions: ["PAUSAR_LINEA", "MARCAR_RESUELTA", "ESCALAR_MANTENIMIENTO"]
-    },
-    {
-      id: "AL-2024-002",
-      type: "FALLO_RED",
-      title: "Conexión de Red Intermitente",
-      description: "Pérdida de conectividad con servidor central. Modo offline activado",
-      priority: "ALTA",
-      status: "EN_PROCESO",
-      timestamp: new Date(Date.now() - 120000), // 2 min ago
-      sop: [
-        "1. VERIFICAR: Cable de red conectado firmemente",
-        "2. REINICIAR: Router industrial (botón rojo en rack)",
-        "3. ESPERAR: 30 segundos para reconexión automática",
-        "4. CONTINUAR: Operación en modo offline está autorizada",
-        "5. DATOS: Se sincronizarán automáticamente al restaurar conexión",
-        "6. Si no se resuelve en 10 min: Notificar a IT (Ext. 4420)"
-      ],
-      actions: ["VERIFICAR_CABLE", "REINICIAR_ROUTER", "CONTACTAR_IT"]
-    },
-    {
-      id: "AL-2024-003",
-      type: "LOTE_CRITICO",
-      title: "⚠️ LOTE CRÍTICAMENTE DAÑADO",
-      description: "Lote LT-2024-489 superó el umbral crítico: 3.8% de tasa de defectos (AQL: 1.0%)",
-      priority: "CRÍTICA",
-      status: "ACTIVA",
-      timestamp: new Date(Date.now() - 60000), // 1 min ago
-      sop: [
-        "1. DETENER: Presionar PARADA DE EMERGENCIA inmediatamente",
-        "2. SEGREGAR: Apartar TODO el lote afectado en área de cuarentena amarilla",
-        "3. ETIQUETAR: Colocar etiqueta roja 'NO CONFORME' en contenedores",
-        "4. NOTIFICAR: Llamar al Supervisor de Calidad (Ext. 2100) URGENTE",
-        "5. DOCUMENTAR: Fotografiar muestras defectuosas con tablet",
-        "6. BLOQUEAR: Marcar lote como BLOQUEADO en sistema",
-        "7. NO REANUDAR: Esperar autorización escrita del supervisor para continuar",
-        "8. ANÁLISIS: Supervisor realizará auditoría de causas raíz"
-      ],
-      actions: ["DETENER_LINEA", "SEGREGAR_LOTE", "NOTIFICAR_SUPERVISOR", "GENERAR_NC"]
-    }
-  ]);
 
-  const [alertHistory] = useState<Alert[]>([
-    {
-      id: "AL-2024-000",
-      type: "OBJETO_EXTRAÑO",
-      title: "Objeto No Identificado en Línea",
-      description: "Sistema detectó elemento metálico en banda transportadora",
-      priority: "ALTA",
-      status: "RESUELTA",
-      timestamp: new Date(Date.now() - 3600000), // 1 hour ago
-      sop: [],
-      actions: []
-    },
-    {
-      id: "AL-2023-999",
-      type: "TEMPERATURA_ANOMALA",
-      title: "Temperatura del Sistema Elevada",
-      description: "CPU alcanzó 78°C - Ventilación aumentada automáticamente",
-      priority: "MEDIA",
-      status: "RESUELTA",
-      timestamp: new Date(Date.now() - 7200000), // 2 hours ago
-      sop: [],
-      actions: []
-    },
-    {
-      id: "AL-2023-998",
-      type: "OBJETO_EXTRAÑO",
-      title: "Objeto Extraño Detectado",
-      description: "Pieza metálica detectada en banda - Línea detenida automáticamente",
-      priority: "ALTA",
-      status: "RESUELTA",
-      timestamp: new Date(Date.now() - 10800000), // 3 hours ago
-      sop: [],
-      actions: []
-    }
-  ]);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTick(t => t + 1);
+    }, 60000);
+    return () => clearInterval(interval);
+  }, []);
+  const [, setTick] = useState(0);
+
+  const rawNotificaciones = registros.filter(r => r.tipo === 'NOTIFICACION_SUPERVISOR');
+
+  const sortedNotificaciones = [...rawNotificaciones].sort((a: any, b: any) => {
+    const aMin = Math.floor((Date.now() - new Date(a.timestamp).getTime()) / 60000);
+    const bMin = Math.floor((Date.now() - new Date(b.timestamp).getTime()) / 60000);
+    
+    const aEscalada = !a.resuelta && aMin > (config?.tiempoLimiteRespuestaAlerta ?? 10);
+    const bEscalada = !b.resuelta && bMin > (config?.tiempoLimiteRespuestaAlerta ?? 10);
+
+    if (aEscalada && !bEscalada) return -1;
+    if (!aEscalada && bEscalada) return 1;
+    return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+  });
+
+  const activeCount = rawNotificaciones.filter((a: any) => !a.resuelta).length;
 
   const handleResolve = (alertId: string) => {
-    setActiveAlerts(alerts => 
-      alerts.map(a => a.id === alertId ? { ...a, status: "RESUELTA" as AlertStatus } : a)
-    );
+    // Maintain mock function for the existing SOP modal if it ever gets triggered
     setSelectedAlert(null);
+    setShowSOP(false);
   };
 
-  const handleEscalate = (alertId: string) => {
-    setActiveAlerts(alerts => 
-      alerts.map(a => a.id === alertId ? { ...a, status: "ESCALADA" as AlertStatus } : a)
-    );
-    setSelectedAlert(null);
-  };
-
-  const getAlertIcon = (type: string) => {
-    switch (type) {
-      case "LENTE_SUCIO": return Camera;
-      case "FALLO_RED": return Wifi;
-      case "TEMPERATURA_ANOMALA": return Thermometer;
-      case "OBJETO_EXTRAÑO": return AlertTriangle;
-      case "PARADA_EMERGENCIA": return Power;
-      default: return AlertOctagon;
-    }
-  };
-
-  const getPriorityColor = (priority: AlertPriority) => {
-    switch (priority) {
-      case "CRÍTICA": return "border-[#ef4444] bg-[#ef4444]/10";
-      case "ALTA": return "border-[#f59e0b] bg-[#f59e0b]/10";
-      case "MEDIA": return "border-[#f1c100] bg-[#f1c100]/10";
-      case "BAJA": return "border-[#3b82f6] bg-[#3b82f6]/10";
-    }
-  };
-
-  const getStatusColor = (status: AlertStatus) => {
-    switch (status) {
-      case "ACTIVA": return "text-[#ef4444]";
-      case "EN_PROCESO": return "text-[#f1c100]";
-      case "RESUELTA": return "text-[#10b981]";
-      case "ESCALADA": return "text-[#f59e0b]";
-    }
+  const getBadgeClass = (tipo: string | undefined) => {
+    if (tipo === 'PARADA_EMERGENCIA') return "bg-[#ef4444]/20 text-[#ef4444] border border-[#ef4444]/30";
+    if (tipo === 'PARADA_NORMAL') return "bg-[#3b82f6]/20 text-[#3b82f6] border border-[#3b82f6]/30";
+    if (tipo === 'PAUSA') return "bg-[#f59e0b]/20 text-[#f59e0b] border border-[#f59e0b]/30";
+    if (tipo === 'RECALIBRACION') return "bg-[#8b5cf6]/20 text-[#8b5cf6] border border-[#8b5cf6]/30";
+    return "bg-gray-800 text-gray-300";
   };
 
   return (
     <div className="flex h-screen bg-[#0a0a0a] overflow-hidden">
       <SidebarVisionQA active="transmision" />
       
-      <div className="flex-1 flex flex-col ml-64 pt-16">
+      <div className="flex-1 flex flex-col ml-16 xl:ml-56 pt-14 xl:pt-16">
         {/* Header */}
         <div className="absolute top-0 left-0 right-0 h-16 backdrop-blur-xl bg-[rgba(10,10,10,0.8)] border-b-2 border-[rgba(127,29,29,0.3)] shadow-[0px_0px_30px_0px_rgba(255,59,48,0.2)] flex items-center justify-between px-6 z-50">
           <div className="flex items-center gap-4">
@@ -198,192 +90,95 @@ export function Alertas() {
           
           <div className="flex items-center gap-3">
             <div className="text-[#71717a] font-['Space_Grotesk'] text-sm">
-              {activeAlerts.filter(a => a.status === "ACTIVA").length} ALERTAS ACTIVAS
+              {activeCount} ALERTAS ACTIVAS
             </div>
           </div>
         </div>
 
         {/* Main Content */}
         <div className="flex-1 overflow-auto p-6 space-y-6">
-          {/* Emergency Actions Strip */}
-          <div className="bg-gradient-to-r from-[#1a1a1a] to-[#2a2a2a] border-2 border-[#ef4444]/30 rounded-lg p-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <Shield size={32} className="text-[#ef4444]" />
-                <div>
-                  <h3 className="text-white font-['Space_Grotesk'] font-bold text-xl">
-                    ACCIONES DE EMERGENCIA
-                  </h3>
-                  <p className="text-[#71717a] font-['Inter'] text-sm mt-1">
-                    Controles críticos de sistema disponibles 24/7
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => navigate("/dashboard")}
-                className="bg-[#ef4444] hover:bg-[#dc2626] text-white font-['Space_Grotesk'] font-bold px-8 py-4 rounded flex items-center gap-2 transition-colors min-h-[64px]"
-              >
-                <Power size={20} />
-                PARADA DE EMERGENCIA
-              </button>
-            </div>
-          </div>
 
-          {/* Active Alerts Section */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-white font-['Space_Grotesk'] font-bold text-2xl">
-                ALERTAS ACTIVAS
-              </h2>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-[#ef4444] animate-pulse" />
-                <span className="text-[#71717a] font-['Space_Grotesk'] text-sm">
-                  Monitoreo en Tiempo Real
-                </span>
-              </div>
-            </div>
-
-            {activeAlerts.filter(a => a.status !== "RESUELTA").length === 0 ? (
-              <div className="bg-[#1a1a1a] border-2 border-gray-800 rounded-lg p-12 text-center">
-                <CheckCircle size={48} className="text-[#10b981] mx-auto mb-4" />
-                <h3 className="text-[#10b981] font-['Space_Grotesk'] font-bold text-xl mb-2">
-                  SISTEMA OPERANDO NORMALMENTE
-                </h3>
-                <p className="text-[#71717a] font-['Inter'] text-base">
-                  No hay alertas activas en este momento
-                </p>
-              </div>
-            ) : (
-              <div className="grid gap-4">
-                {activeAlerts
-                  .filter(a => a.status !== "RESUELTA")
-                  .map((alert) => {
-                    const Icon = getAlertIcon(alert.type);
-                    return (
-                      <div
-                        key={alert.id}
-                        className={`bg-[#1a1a1a] border-2 rounded-lg p-6 ${getPriorityColor(alert.priority)}`}
-                      >
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex items-start gap-4">
-                            <div className={`p-3 rounded-lg ${
-                              alert.priority === "CRÍTICA" ? "bg-[#ef4444]/20" :
-                              alert.priority === "ALTA" ? "bg-[#f59e0b]/20" :
-                              "bg-[#f1c100]/20"
-                            }`}>
-                              <Icon size={28} className={
-                                alert.priority === "CRÍTICA" ? "text-[#ef4444]" :
-                                alert.priority === "ALTA" ? "text-[#f59e0b]" :
-                                "text-[#f1c100]"
-                              } />
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex items-center gap-3 mb-2">
-                                <h3 className="text-white font-['Space_Grotesk'] font-bold text-lg">
-                                  {alert.title}
-                                </h3>
-                                <span className={`px-2 py-1 rounded text-[10px] font-bold ${
-                                  alert.priority === "CRÍTICA" ? "bg-[#ef4444] text-white" :
-                                  alert.priority === "ALTA" ? "bg-[#f59e0b] text-white" :
-                                  "bg-[#f1c100] text-black"
-                                }`}>
-                                  {alert.priority}
-                                </span>
-                                <span className={`px-2 py-1 rounded text-[10px] font-bold ${getStatusColor(alert.status)}`}>
-                                  {alert.status}
-                                </span>
-                              </div>
-                              <p className="text-[#a1a1aa] font-['Inter'] text-sm mb-3">
-                                {alert.description}
-                              </p>
-                              <div className="flex items-center gap-2 text-[#71717a] text-xs">
-                                <Clock size={14} />
-                                <span>ID: {alert.id} • Hace {Math.floor((Date.now() - alert.timestamp.getTime()) / 60000)} minutos</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Action Buttons */}
-                        <div className="flex gap-3 mt-4 pt-4 border-t border-gray-800">
-                          <button
-                            onClick={() => {
-                              setSelectedAlert(alert);
-                              setShowSOP(true);
-                            }}
-                            className="flex-1 bg-[#353534] hover:bg-[#3d3c3b] border border-[#5d3f3b] text-white font-['Space_Grotesk'] font-bold px-6 py-4 rounded flex items-center justify-center gap-2 transition-colors min-h-[64px]"
-                          >
-                            <FileText size={20} />
-                            VER PROCEDIMIENTO (SOP)
-                          </button>
-                          <button
-                            onClick={() => handleResolve(alert.id)}
-                            className="flex-1 bg-[#10b981] hover:bg-[#059669] text-white font-['Space_Grotesk'] font-bold px-6 py-4 rounded flex items-center justify-center gap-2 transition-colors min-h-[64px]"
-                          >
-                            <CheckCircle size={20} />
-                            MARCAR COMO RESUELTA
-                          </button>
-                          <button
-                            onClick={() => handleEscalate(alert.id)}
-                            className="flex-1 bg-[#f59e0b] hover:bg-[#d97706] text-white font-['Space_Grotesk'] font-bold px-6 py-4 rounded flex items-center justify-center gap-2 transition-colors min-h-[64px]"
-                          >
-                            <ArrowRight size={20} />
-                            ESCALAR A SUPERVISOR
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-              </div>
-            )}
-          </div>
-
-          {/* Alert History */}
-          <div className="space-y-4">
-            <h2 className="text-white font-['Space_Grotesk'] font-bold text-2xl">
-              HISTORIAL DEL TURNO
+          {/* ALERTAS ACTIVAS Section */}
+          <div className="bg-[#1a1a1a] border-t-4 border-t-[#3b82f6] rounded-b-lg shadow-lg p-6">
+            <h2 className="text-white font-['Space_Grotesk'] font-bold text-xl xl:text-2xl mb-4 uppercase tracking-wider">
+              ALERTAS ACTIVAS
             </h2>
             
-            <div className="bg-[#1a1a1a] border-2 border-gray-800 rounded-lg overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-[#2a2a2a]">
-                  <tr>
-                    <th className="text-left px-6 py-4 text-[#71717a] font-['Space_Grotesk'] font-bold text-xs uppercase">ID</th>
-                    <th className="text-left px-6 py-4 text-[#71717a] font-['Space_Grotesk'] font-bold text-xs uppercase">Tipo</th>
-                    <th className="text-left px-6 py-4 text-[#71717a] font-['Space_Grotesk'] font-bold text-xs uppercase">Descripción</th>
-                    <th className="text-left px-6 py-4 text-[#71717a] font-['Space_Grotesk'] font-bold text-xs uppercase">Prioridad</th>
-                    <th className="text-left px-6 py-4 text-[#71717a] font-['Space_Grotesk'] font-bold text-xs uppercase">Estado</th>
-                    <th className="text-left px-6 py-4 text-[#71717a] font-['Space_Grotesk'] font-bold text-xs uppercase">Hora</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[...activeAlerts.filter(a => a.status === "RESUELTA"), ...alertHistory].map((alert, idx) => (
-                    <tr key={alert.id} className={idx % 2 === 0 ? "bg-[#1a1a1a]" : "bg-[#1f1f1f]"}>
-                      <td className="px-6 py-4 text-[#d4d4d8] font-['Liberation_Mono'] text-sm">{alert.id}</td>
-                      <td className="px-6 py-4 text-[#a1a1aa] font-['Inter'] text-sm">{alert.type}</td>
-                      <td className="px-6 py-4 text-[#a1a1aa] font-['Inter'] text-sm">{alert.title}</td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2 py-1 rounded text-[10px] font-bold ${
-                          alert.priority === "CRÍTICA" ? "bg-[#ef4444]/20 text-[#ef4444]" :
-                          alert.priority === "ALTA" ? "bg-[#f59e0b]/20 text-[#f59e0b]" :
-                          "bg-[#f1c100]/20 text-[#f1c100]"
-                        }`}>
-                          {alert.priority}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`font-['Space_Grotesk'] font-bold text-xs ${getStatusColor(alert.status)}`}>
-                          {alert.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-[#71717a] font-['Liberation_Mono'] text-xs">
-                        {alert.timestamp.toLocaleTimeString('es-AR')}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            {sortedNotificaciones.length === 0 ? (
+              <div className="text-[#71717a] font-['Inter'] text-center text-sm py-8 italic bg-[#222] rounded-lg border border-gray-800">
+                Sin paradas en este turno
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {sortedNotificaciones.map((notif: any) => {
+                  const minutosTranscurridos = Math.floor(
+                    (Date.now() - new Date(notif.timestamp).getTime()) / 60000
+                  );
+                  const esEscalada = !notif.resuelta && minutosTranscurridos > (config?.tiempoLimiteRespuestaAlerta ?? 10);
+
+                  return (
+                    <div key={notif.id} className="space-y-1 mb-4">
+                      {/* CASILLA 1 - ALERTA GENERADA */}
+                      <div className="bg-[#2a0a0a] border border-[#ef4444]/40 rounded-lg p-4">
+                        <div className="text-[#ef4444] font-bold text-xs mb-3">
+                          ⚠ ALERTA GENERADA
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          <div className="flex items-start justify-between gap-4">
+                            <span className={`px-2.5 py-1 rounded text-[10px] font-bold font-['Space_Grotesk'] uppercase tracking-wider ${getBadgeClass(notif.paradaTipo)}`}>
+                              {notif.paradaTipo?.replace('_', ' ')}
+                            </span>
+                            <div className="font-['Liberation_Mono'] text-xs text-[#52525b]">
+                              {notif.hora || new Date(notif.timestamp).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                          </div>
+                          <div className="text-xs text-[#71717a] mt-1">
+                            {notif.operario} {notif.loteRelacionado ? `• Lote ${notif.loteRelacionado}` : ''}
+                          </div>
+                          <div className="text-sm text-[#a1a1aa]">
+                            {notif.causa || notif.descripcion}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* CASILLA 2 - NOTIFICACIÓN DE SOLUCIÓN */}
+                      {notif.resuelta ? (
+                        <div className="bg-[#0a2a1a] border border-[#10b981]/40 rounded-lg p-4">
+                          <div className="text-[#10b981] font-bold text-xs mb-2">
+                            ✓ RESUELTO
+                          </div>
+                          <div className="text-sm text-[#a1a1aa] mb-1">
+                            {notif.resolucion || "Emergencia resuelta por el operario"}
+                          </div>
+                          {notif.horaResolucion && (
+                            <div className="font-['Liberation_Mono'] text-xs text-[#52525b]">
+                              {notif.horaResolucion}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className={`rounded-lg p-4 ${esEscalada ? "bg-[#1a1a1a] border border-[#ef4444] animate-pulse" : "bg-[#1a1a1a] border border-[#3f3f46]"}`}>
+                          <div className={`font-bold text-xs mb-2 ${esEscalada ? "text-[#ef4444]" : "text-[#f59e0b]"}`}>
+                            {esEscalada ? "🔴 CRÍTICA — TIEMPO EXCEDIDO" : "⏳ PENDIENTE DE RESOLUCIÓN"}
+                          </div>
+                          {esEscalada ? (
+                            <div className="text-sm text-[#a1a1aa]">
+                              Lleva {minutosTranscurridos} min sin resolverse
+                            </div>
+                          ) : (
+                            config?.tiempoLimiteRespuestaAlerta && (
+                              <div className="text-xs text-[#71717a]">
+                                Tiempo límite: {config.tiempoLimiteRespuestaAlerta} min
+                              </div>
+                            )
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -431,7 +226,7 @@ export function Alertas() {
                   PASOS A SEGUIR:
                 </h3>
                 <div className="space-y-3">
-                  {selectedAlert.sop.map((step, idx) => (
+                  {selectedAlert.sop.map((step: string, idx: number) => (
                     <div key={idx} className="bg-[#2a2a2a] border border-gray-700 rounded-lg p-5 flex gap-4">
                       <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[#ef4444] flex items-center justify-center">
                         <span className="text-white font-bold text-sm">{idx + 1}</span>
@@ -447,10 +242,7 @@ export function Alertas() {
               {/* Actions */}
               <div className="flex gap-3 pt-4">
                 <button
-                  onClick={() => {
-                    handleResolve(selectedAlert.id);
-                    setShowSOP(false);
-                  }}
+                  onClick={() => handleResolve(selectedAlert.id)}
                   className="flex-1 bg-[#10b981] hover:bg-[#059669] text-white font-['Space_Grotesk'] font-bold px-6 py-5 rounded flex items-center justify-center gap-2 transition-colors min-h-[64px]"
                 >
                   <CheckCircle size={20} />

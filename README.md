@@ -41,5 +41,6 @@ VisionQA/
 ```
 
 # 👥 Development Team
-Kevin Steven Posso Sanchez - Software Development Technology
-Alejandro Ospina López - Software Development Technology
+*Kevin Steven Posso Sanchez - Software Development Technology
+Alejandro Ospina López - Software Development Technology*
+

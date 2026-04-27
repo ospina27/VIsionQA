@@ -237,7 +237,7 @@ export function DashboardCore() {
 
               <button
                 onClick={handleLoteRechazado}
-                className="flex-1 px-3 py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded transition-colors text-sm min-h-[64px]"
+                className="flex-1 px-3 py-3 bg-orange-600 hover:bg-orange-500 text-white font-bold rounded transition-colors text-sm min-h-[64px]"
               >
                 Simular Rechazo
               </button>
@@ -250,7 +250,7 @@ export function DashboardCore() {
             <div className="space-y-2">
               <div className="text-gray-400 text-xs md:text-sm">ESTADO DEL LOTE</div>
               <div className={`text-xl md:text-2xl lg:text-3xl font-bold ${
-                aqlStatus === "NORMAL" ? "text-green-500" : "text-red-500"
+                aqlStatus === "NORMAL" ? "text-green-500" : "text-orange-500"
               }`}>
                 LOTE {aqlStatus}
               </div>
@@ -270,7 +270,7 @@ export function DashboardCore() {
                 </div>
                 <div>
                   <div className="text-gray-400 text-xs md:text-sm mb-2">RECHAZADOS</div>
-                  <div className="text-xl md:text-2xl lg:text-3xl font-bold text-red-500">{rechazados}</div>
+                  <div className="text-xl md:text-2xl lg:text-3xl font-bold text-orange-500">{rechazados}</div>
                 </div>
               </div>
             </div>
@@ -279,7 +279,7 @@ export function DashboardCore() {
             <div className="bg-[#0a0a0a] rounded-lg p-4 md:p-6">
               <div className="text-gray-400 text-xs md:text-sm mb-2">TASA DE DEFECTOS</div>
               <div className={`text-2xl md:text-3xl lg:text-4xl font-bold ${
-                parseFloat(aqlRate) <= 1.0 ? "text-green-500" : "text-red-500"
+                parseFloat(aqlRate) <= 1.0 ? "text-green-500" : "text-orange-500"
               }`}>
                 {aqlRate}%
               </div>
@@ -380,8 +380,8 @@ export function DashboardCore() {
               </div>
 
               {/* Rechazo */}
-              <div className="bg-red-900/30 border-2 border-red-500 rounded-lg p-4 md:p-6">
-                <div className="inline-block px-3 md:px-4 py-1 md:py-2 bg-red-500 text-white font-bold rounded mb-3 md:mb-4 text-sm md:text-base">
+              <div className="bg-orange-900/30 border-2 border-orange-500 rounded-lg p-4 md:p-6">
+                <div className="inline-block px-3 md:px-4 py-1 md:py-2 bg-orange-500 text-white font-bold rounded mb-3 md:mb-4 text-sm md:text-base">
                   RECHAZO
                 </div>
                 <h4 className="text-white text-lg md:text-xl font-bold mb-3">Quemadura Crítica</h4>

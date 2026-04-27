@@ -4,7 +4,6 @@ import {
   ClipboardCheck, 
   FileText, 
   Settings,
-  LogOut,
   Home
 } from "lucide-react";
 
@@ -20,7 +19,6 @@ export function Sidebar({ station }: { station?: string }) {
 
   const bottomItems = [
     { path: "/setup", icon: Home, label: "Nuevo Lote" },
-    { path: "/", icon: LogOut, label: "Cerrar Sesión" },
   ];
 
   return (
